@@ -53,6 +53,47 @@ class Renderer(object):
         if (0 <= x < self.width) and (0 <= y < self.height):
             self.framebuffer[int(x)][int(y)] = color or self.curr_color
 
+    # (100 puntos) Deben crear una función glLine(x0, y0, x1, y1) que se utilice para dibujar una línea recta de (x0, y0) a (x1, y1)
+    def glLine(self, x0, y0, x1, y1):
+        x0 = int((x0 + 1) * (self.vpWidth / 2) + self.vpX)
+        y0 = int((y0 + 1) * (self.vpHeight / 2) + self.vpY)
+        x1 = int((x1 + 1) * (self.vpWidth / 2) + self.vpX)
+        y1 = int((y1 + 1) * (self.vpHeight / 2) + self.vpY)
+
+        dy = abs(y1 - y0)
+        dx = abs(x1 - x0)
+
+        steep = dy > dx
+
+        if steep:
+            x0, y0 = y0, x0
+            x1, y1 = y1, x1
+
+            dy = abs(y1 - y0)
+            dx = abs(x1 - x0)
+
+        offset = 0 * 2 * dx
+        threshold = 0.5 * 2 * dx
+        y = y0
+
+        points = []
+        for x in range(x0, x1):
+            if steep:
+                points.append((y, x))
+            else:
+                points.append((x, y))
+
+            offset += (dy/dx) * 2 * dx
+            if offset >= threshold:
+                y += 1 if y0 < y1 else -1
+                threshold += 1 * 2 * dx
+
+        for point in points:
+            self.glVertex(
+                (point[0] - self.vpX) * (2/self.width) - 1,
+                (point[1] - self.vpX) * (2/self.height) - 1,
+            )
+
     # (05 puntos) Deben crear una función glFinish() que escriba el archivo de imagen
     def glFinish(self, filename: str = 'output.bmp'):
         with open(filename, "wb") as file:
@@ -84,4 +125,5 @@ r.glInit()
 r.glClearColor(0.3, 0.3, 0.3)
 r.glClear()
 r.glVertex(0, 0)
+r.glLine(-1, 0, 1, 0)
 r.glFinish()
