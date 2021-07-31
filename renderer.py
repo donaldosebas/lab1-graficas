@@ -1,4 +1,5 @@
 from persistence.persistence import Persistence
+from obj import Obj
 
 persistenceRepo = Persistence()
 
@@ -53,12 +54,57 @@ class Renderer(object):
         if (0 <= x < self.width) and (0 <= y < self.height):
             self.framebuffer[int(x)][int(y)] = color or self.curr_color
 
+    def point(self, y, x):
+        self.framebuffer[y][x] = self.curr_color
+
+    def line(self, x0, y0, x1, y1):
+        dy = abs(y1 - y0)
+        dx = abs(x1 - x0)
+        steep = dy > dx
+
+        if steep:
+            x0, y0 = y0, x0
+            x1, y1 = y1, x1
+            dy = abs(y1 - y0)
+            dx = abs(x1 - x0)
+
+        offset = 0 * 2 * dx
+        threshold = 0.5 * 2 * dx
+        y = y0
+        points = []
+        for x in range(x0, x1):
+            if steep:
+                points.append((y, x))
+            else:
+                points.append((x, y))
+
+            offset += (dy/dx) * 2 * dx
+            if offset >= threshold:
+                y += 1 if y0 < y1 else -1
+                threshold += 1 * 2 * dx
+        for point in points:
+            self.point(*point)
+
+    def load(self, filename, translate, scale):
+        model = Obj(filename)
+
+        for face in model.faces:
+            vcount = len(face)
+            for j in range(vcount):
+                f1 = face[j][0]
+                f2 = face[(j + 1) % vcount][0]
+
+                v1 = model.vertices[f1 - 1]
+                v2 = model.vertices[f2 - 1]
+
+                x1 = round((v1[0] + translate[0]) * scale[0])
+                y1 = round((v1[1] + translate[1]) * scale[1])
+                x2 = round((v2[0] + translate[0]) * scale[0])
+                y2 = round((v2[1] + translate[1]) * scale[1])
+                self.line(x1, y1, x2, y2)
+
     # (100 puntos) Deben crear una función glLine(x0, y0, x1, y1) que se utilice para dibujar una línea recta de (x0, y0) a (x1, y1)
     def glLine(self, x0, y0, x1, y1):
-        x0 = int((x0 + 1) * (self.vpWidth / 2) + self.vpX)
-        y0 = int((y0 + 1) * (self.vpHeight / 2) + self.vpY)
-        x1 = int((x1 + 1) * (self.vpWidth / 2) + self.vpX)
-        y1 = int((y1 + 1) * (self.vpHeight / 2) + self.vpY)
 
         dy = abs(y1 - y0)
         dx = abs(x1 - x0)
@@ -74,8 +120,13 @@ class Renderer(object):
 
         offset = 0 * 2 * dx
         threshold = 0.5 * 2 * dx
-        y = y0
 
+        if x1 < x0:
+            y = y1
+            x0, x1 = x1, x0
+            y0, y1 = y1, y0
+        else:
+            y = y0
         points = []
         for x in range(x0, x1):
             if steep:
@@ -89,9 +140,9 @@ class Renderer(object):
                 threshold += 1 * 2 * dx
 
         for point in points:
-            self.glVertex(
-                (point[0] - self.vpX) * (2/self.width) - 1,
-                (point[1] - self.vpX) * (2/self.height) - 1,
+            self.point(
+                int(point[0]),
+                int(point[1]),
             )
 
     # (05 puntos) Deben crear una función glFinish() que escriba el archivo de imagen
@@ -118,12 +169,3 @@ class Renderer(object):
             for y in range(self.height):
                 for x in range(self.width):
                     file.write(self.framebuffer[x][y])
-
-
-r = Renderer(1024, 768)
-r.glInit()
-r.glClearColor(0.3, 0.3, 0.3)
-r.glClear()
-r.glVertex(0, 0)
-r.glLine(-1, 0, 1, 0)
-r.glFinish()
