@@ -1,1 +1,1 @@
-# lab1-graficas y lab2-gráficas
+# SR1-graficas, SR2-gráficas Y SR3-gráficas
