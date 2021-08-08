@@ -110,7 +110,7 @@ class Renderer(object):
                 y1 = round((v1[1] + translate[1]) * scale[1])
                 x2 = round((v2[0] + translate[0]) * scale[0])
                 y2 = round((v2[1] + translate[1]) * scale[1])
-                self.line(x1, y1, x2, y2)
+                self.glLine(x1, y1, x2, y2)
 
     # (100 puntos) Deben crear una función glLine(x0, y0, x1, y1) que se utilice para dibujar una línea recta de (x0, y0) a (x1, y1)
     def glLine(self, x0, y0, x1, y1, save_points: bool = False):
