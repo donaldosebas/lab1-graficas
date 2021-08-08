@@ -9,6 +9,7 @@ class Renderer(object):
     def __init__(self, width: int = 0, height: int = 0):
         self.initial_width = width
         self.initial_height = height
+        self.pointsVisited = {}
 
     # (05 puntos) Deben crear una función glInit() que inicialice cualquier objeto interno que requiera su software renderer
     def glInit(self, curr_color=None, clear_color=None):
@@ -54,8 +55,16 @@ class Renderer(object):
         if (0 <= x < self.width) and (0 <= y < self.height):
             self.framebuffer[int(x)][int(y)] = color or self.curr_color
 
-    def point(self, y, x):
-        self.framebuffer[y][x] = self.curr_color
+    def points(self, x, y):
+        self.pointsVisited[f'{x},{y}'] = (x, y)
+
+    def clear_point(self):
+        self.pointsVisited.clear()
+
+    def point(self, x, y, is_save: bool):
+        if is_save:
+            self.points(x, y)
+        self.framebuffer[x][y] = self.curr_color
 
     def line(self, x0, y0, x1, y1):
         dy = abs(y1 - y0)
@@ -104,7 +113,7 @@ class Renderer(object):
                 self.line(x1, y1, x2, y2)
 
     # (100 puntos) Deben crear una función glLine(x0, y0, x1, y1) que se utilice para dibujar una línea recta de (x0, y0) a (x1, y1)
-    def glLine(self, x0, y0, x1, y1):
+    def glLine(self, x0, y0, x1, y1, save_points: bool = False):
 
         dy = abs(y1 - y0)
         dx = abs(x1 - x0)
@@ -141,11 +150,12 @@ class Renderer(object):
 
         for point in points:
             self.point(
-                int(point[0]),
-                int(point[1]),
+                *point,
+                save_points
             )
 
     # (05 puntos) Deben crear una función glFinish() que escriba el archivo de imagen
+
     def glFinish(self, filename: str = 'output.bmp'):
         with open(filename, "wb") as file:
             file.write(bytes('B'.encode('ascii')))
