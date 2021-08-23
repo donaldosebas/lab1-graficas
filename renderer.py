@@ -10,6 +10,7 @@ class Renderer(object):
         self.initial_width = width
         self.initial_height = height
         self.pointsVisited = {}
+        self.light = persistenceRepo.V3(0, 0, 1)
 
     # (05 puntos) Deben crear una función glInit() que inicialice cualquier objeto interno que requiera su software renderer
     def glInit(self, curr_color=None, clear_color=None):
@@ -40,6 +41,11 @@ class Renderer(object):
         self.framebuffer = [[self.clear_color for y in range(
             self.height)] for x in range(self.width)]
 
+        self.zbuffer = [
+            [-99999 for x in range(self.width)]
+            for y in range(self.height)
+        ]
+
     # (15 puntos) Deben crear una función glColor(r, g, b) con la que se pueda cambiar el color con el que funciona glVertex(). Los parámetros deben ser números en el rango de 0 a 1.
     def glColor(self, r: int = 0, g: int = 0, b: int = 0):
         self.curr_color = persistenceRepo.color(r, g, b)
@@ -61,10 +67,10 @@ class Renderer(object):
     def clear_point(self):
         self.pointsVisited.clear()
 
-    def point(self, x, y, is_save: bool):
+    def point(self, x, y, is_save: bool, color):
         if is_save:
             self.points(x, y)
-        self.framebuffer[x][y] = self.curr_color
+        self.framebuffer[y][x] = color or self.curr_color
 
     def line(self, x0, y0, x1, y1):
         dy = abs(y1 - y0)
@@ -179,3 +185,87 @@ class Renderer(object):
             for y in range(self.height):
                 for x in range(self.width):
                     file.write(self.framebuffer[x][y])
+
+    def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
+        return persistenceRepo.V3(
+            round((vertex[0] + translate[0]) * scale[0]),
+            round((vertex[1] + translate[1]) * scale[1]),
+            round((vertex[2] + translate[2]) * scale[2])
+        )
+
+    def triangle(self, A, B, C, color=None):
+        xmin, xmax, ymin, ymax = persistenceRepo.bbox(A, B, C)
+        for x in range(xmin, xmax + 1):
+            for y in range(ymin, ymax + 1):
+                P = persistenceRepo.V2(x, y)
+                w, v, u = persistenceRepo.barycentric(A, B, C, P)
+                if w < 0 or v < 0 or u < 0:
+                    continue
+                z = A.z * w + B.z * v + C.z * u
+                try:
+                    if z > self.zbuffer[x][y]:
+                        self.point(y, x, False, color)
+                        self.zbuffer[x][y] = z
+                except:
+                    pass
+
+    def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1)):
+        model = Obj(filename)
+        light = persistenceRepo.V3(0, 0, 1)
+
+        for face in model.faces:
+            vcount = len(face)
+
+            if vcount == 3:
+                f1 = face[0][0] - 1
+                f2 = face[1][0] - 1
+                f3 = face[2][0] - 1
+
+                a = self.transform(model.vertices[f1], translate, scale)
+                b = self.transform(model.vertices[f2], translate, scale)
+                c = self.transform(model.vertices[f3], translate, scale)
+
+                normal = persistenceRepo.norm(persistenceRepo.cross(
+                    persistenceRepo.sub(b, a), persistenceRepo.sub(c, a)))
+                intensity = persistenceRepo.dot(normal, self.light)
+                grey = round(255 * intensity)
+
+                if intensity < 0:
+                    continue
+
+                self.triangle(
+                    a, b, c, persistenceRepo.ncolor(grey, grey, grey))
+
+            else:
+                f1 = face[0][0] - 1
+                f2 = face[1][0] - 1
+                f3 = face[2][0] - 1
+                f4 = face[3][0] - 1
+
+                vertices = [
+                    self.transform(model.vertices[f1], translate, scale),
+                    self.transform(model.vertices[f2], translate, scale),
+                    self.transform(model.vertices[f3], translate, scale),
+                    self.transform(model.vertices[f4], translate, scale),
+                ]
+
+                normal = persistenceRepo.norm(
+                    persistenceRepo.cross(
+                        persistenceRepo.sub(
+                            vertices[0], vertices[1]
+                        ),
+                        persistenceRepo.sub(vertices[1], vertices[2])
+                    )
+                )
+
+                intensity = persistenceRepo.dot(normal, light)
+                grey = round(255 * intensity)
+
+                if grey < 0:
+                    continue
+
+                A, B, C, D = vertices
+                self.triangle(
+                    A, B, C, persistenceRepo.ncolor(grey, grey, grey))
+                self.triangle(
+                    A, C, D, persistenceRepo.ncolor(grey, grey, grey))
