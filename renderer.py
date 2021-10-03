@@ -1,5 +1,7 @@
 from persistence.persistence import Persistence
-from obj import Obj
+from obj import Obj, Texture
+import random
+import math
 
 persistenceRepo = Persistence()
 
@@ -72,33 +74,45 @@ class Renderer(object):
             self.points(x, y)
         self.framebuffer[y][x] = color or self.curr_color
 
-    def line(self, x0, y0, x1, y1):
-        dy = abs(y1 - y0)
-        dx = abs(x1 - x0)
-        steep = dy > dx
+    def shader(self, x, y):
+        color = [55, 102, 172]
+        point = [660, 460]
+        if y < 1080 and y > 1080 - 240 - random.randint(0, 5):
+            color = [23, 25, 47]
+        if y < 1080 - 234 + random.randint(0, 20) and y > 1080 - 253 - random.randint(0, 5):
+            color = [31, 47, 73]
+        if y < 1080 - 255 + random.randint(0, 5) and y > 1080 - 262 - random.randint(0, 5):
+            color = [24, 39, 62]
+        if y < 1080 - 265 + random.randint(0, 5) and y > 1080 - 265 - random.randint(0, 5):
+            color = [102, 138, 188]
+        if y < 1080 - 275 + random.randint(0, 5) and y > 1080 - 275 - random.randint(0, 5):
+            color = [54, 81, 124]
 
-        if steep:
-            x0, y0 = y0, x0
-            x1, y1 = y1, x1
-            dy = abs(y1 - y0)
-            dx = abs(x1 - x0)
+        if y < 1080 - 335 + random.randint(0, 10) and y > 1080 - 365 - random.randint(0, 5):
+            color = [50, 83, 147]
+        if y < 1080 - 395 + random.randint(0, 10) and y > 1080 - 425 - random.randint(0, 10):
+            color = [95, 156, 236]
+        if y < 1080 - 465 + random.randint(0, 10) and y > 1080 - 465 - random.randint(0, 10):
+            color = [95, 156, 236]
 
-        offset = 0 * 2 * dx
-        threshold = 0.5 * 2 * dx
-        y = y0
-        points = []
-        for x in range(x0, x1):
-            if steep:
-                points.append((y, x))
-            else:
-                points.append((x, y))
+        if y < 1080 - 535 + random.randint(0, 5) and y > 1080 - 555 - random.randint(0, 5):
+            color = [133, 182, 254]
 
-            offset += (dy/dx) * 2 * dx
-            if offset >= threshold:
-                y += 1 if y0 < y1 else -1
-                threshold += 1 * 2 * dx
-        for point in points:
-            self.point(*point)
+        if y < 1080 - 575 + random.randint(0, 10) and y > 1080 - 618 - random.randint(0, 10):
+            color = [180, 224, 254]
+
+        if y < 1080 - 715 + random.randint(0, 10) and y > 1080 - 745 - random.randint(0, 10):
+            color = [93, 151, 224]
+        if y < 1080 - 805 + random.randint(0, 10) and y > 1080 - 865 - random.randint(0, 10):
+            color = [78, 112, 161]
+        if y < 1080 - 865 + random.randint(0, 10) and y > 1080 - 877 - random.randint(0, 10):
+            color = [104, 159, 202]
+        if y < 1080 - 885 + random.randint(0, 10) and y > 1080 - 905 - random.randint(0, 10):
+            color = [104, 155, 205]
+        d = math.dist([point[0], point[1]], [x, y]) / 720
+        d = 1-d
+        color = [c*d for c in color]
+        return self.glColor(color[0]/255, color[1]/255, color[2]/255)
 
     def load(self, filename, translate, scale):
         model = Obj(filename)
@@ -201,6 +215,7 @@ class Renderer(object):
                 w, v, u = persistenceRepo.barycentric(A, B, C, P)
                 if w < 0 or v < 0 or u < 0:
                     continue
+                color = self.shader(x, y)
                 z = A.z * w + B.z * v + C.z * u
                 try:
                     if z > self.zbuffer[x][y]:
@@ -209,7 +224,7 @@ class Renderer(object):
                 except:
                     pass
 
-    def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1)):
+    def loads(self, filename, translate=(0, 0, 0), scale=(1, 1, 1)):
         model = Obj(filename)
         light = persistenceRepo.V3(0, 0, 1)
 
